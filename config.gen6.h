@@ -260,14 +260,18 @@
 
 /***************************************************************************\
 *                                                                           *
-* Define your temperature sensors here                                      *
+* Define your temperature sensors here. One line for each sensor, only      *
+* limited by the number of available ATmega pins.                           *
 *                                                                           *
-* If your temperature sensor has no associated heater, enter '255' as the   *
-*   heater index. Unassociated temperature sensors are still read, but they *
-*   do not affect firmware operation                                        *
+* For a GEN3 set temp_type to TT_INTERCOM and temp_pin to 0.                *
 *                                                                           *
-* Types are same as TEMP_ list above- TT_MAX6675, TT_THERMISTOR, TT_AD595,  *
+* Types are same as TEMP_ list above - TT_MAX6675, TT_THERMISTOR, TT_AD595, *
 *   TT_PT100, TT_INTERCOM, TT_NONE. See list in temp.c.                     *
+*                                                                           *
+* The "additional" field is used for TT_THERMISTOR only. It defines the     *
+* name of the table(s) in ThermistorTable.h to use. Typically, this is      *
+* THERMISTOR_EXTRUDER for the first or only table, or THERMISTOR_BED for    *
+* the second table. See also early in ThermistorTable.{single|double}.h.    *
 *                                                                           *
 \***************************************************************************/
 
@@ -275,8 +279,8 @@
 	#define DEFINE_TEMP_SENSOR(...)
 #endif
 
-//                 name       type          pin		additional
-DEFINE_TEMP_SENSOR(extruder, TT_THERMISTOR, PINA5,	THERMISTOR_EXTRUDER)
+//                 name       type            pin        additional
+DEFINE_TEMP_SENSOR(extruder,  TT_THERMISTOR,  PINA5,     THERMISTOR_EXTRUDER)
 
 
 
@@ -428,11 +432,18 @@ PWM value for 'off'
 */
 #define		STEP_INTERRUPT_INTERRUPTIBLE	1
 
-/*
+/**
 	temperature history count. This is how many temperature readings to keep in order to calculate derivative in PID loop
 	higher values make PID derivative term more stable at the expense of reaction time
 */
 #define	TH_COUNT					8
+
+/** \def FAST_PWM
+	Teacup offers two PWM frequencies, 76(61) Hz and 78000(62500) Hz on a 20(16) MHz electronics. The faster one is the default, as it's what most other firmwares do. It can make the heater MOSFETs pretty hot, though.
+
+	Comment this option out if your MOSFETs overheat. Drawback is, in a quiet environment you might notice the heaters and your power supply humming, then.
+*/
+#define	FAST_PWM
 
 // this is the scaling of internally stored PID values. 1024L is a good value
 #define	PID_SCALE						1024L

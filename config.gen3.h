@@ -3,6 +3,7 @@
 /** \file
 	\brief Gen3 Electronics Sample Configuration
 */
+
 /*
 	CONTENTS
 
@@ -15,8 +16,6 @@
 	7. Miscellaneous
 	8. Appendix A - PWMable pins and mappings
 */
-
-#error this config is marginally, and may be incorrect! please post in forum or via git any corrections
 
 /***************************************************************************\
 *                                                                           *
@@ -60,12 +59,12 @@
 
 	valid range = 20 to 4'0960'000 (0.02 to 40960 steps/mm)
 */
-#define	STEPS_PER_M_X					320000
-#define	STEPS_PER_M_Y					320000
-#define	STEPS_PER_M_Z					200000
+#define	STEPS_PER_M_X					10047
+#define	STEPS_PER_M_Y					10047
+#define	STEPS_PER_M_Z					320000
 
 /// http://blog.arcol.hu/?p=157 may help with this one
-#define	STEPS_PER_M_E					320000
+#define	STEPS_PER_M_E					35200
 
 
 /*
@@ -76,8 +75,8 @@
 */
 
 /// used for G0 rapid moves and as a cap for all other feedrates
-#define	MAXIMUM_FEEDRATE_X		200
-#define	MAXIMUM_FEEDRATE_Y		200
+#define	MAXIMUM_FEEDRATE_X		5000
+#define	MAXIMUM_FEEDRATE_Y		5000
 #define	MAXIMUM_FEEDRATE_Z		100
 #define	MAXIMUM_FEEDRATE_E		200
 
@@ -194,9 +193,9 @@
 #define	X_MAX_PIN							DIO21
 #define	X_ENABLE_PIN					DIO19
 //#define	X_INVERT_DIR
-//#define	X_INVERT_MIN
-//#define	X_INVERT_MAX
-//#define	X_INVERT_ENABLE
+#define	X_INVERT_MIN
+#define	X_INVERT_MAX
+#define	X_INVERT_ENABLE
 
 #define	Y_STEP_PIN						DIO23
 #define	Y_DIR_PIN							DIO22
@@ -204,9 +203,9 @@
 #define	Y_MAX_PIN							AIO5
 #define	Y_ENABLE_PIN					AIO7
 //#define	Y_INVERT_DIR
-//#define	Y_INVERT_MIN
-//#define	Y_INVERT_MAX
-//#define	Y_INVERT_ENABLE
+#define	Y_INVERT_MIN
+#define	Y_INVERT_MAX
+#define	Y_INVERT_ENABLE
 
 #define	Z_STEP_PIN						AIO4
 #define	Z_DIR_PIN							AIO3
@@ -214,9 +213,9 @@
 #define	Z_MAX_PIN							AIO0
 #define	Z_ENABLE_PIN					AIO2
 //#define	Z_INVERT_DIR
-//#define	Z_INVERT_MIN
-//#define	Z_INVERT_MAX
-//#define	Z_INVERT_ENABLE
+#define	Z_INVERT_MIN
+#define	Z_INVERT_MAX
+#define	Z_INVERT_ENABLE
 
 #define	E_STEP_PIN						DIO17
 #define	E_DIR_PIN							DIO16
@@ -262,12 +261,18 @@
 
 /***************************************************************************\
 *                                                                           *
-* Define your temperature sensors here                                      *
+* Define your temperature sensors here. One line for each sensor, only      *
+* limited by the number of available ATmega pins.                           *
 *                                                                           *
-* for GEN3 set temp_type to TT_INTERCOM and temp_pin to 0                   *
+* For a GEN3 set temp_type to TT_INTERCOM and temp_pin to 0.                *
 *                                                                           *
-* Types are same as TEMP_ list above- TT_MAX6675, TT_THERMISTOR, TT_AD595,  *
+* Types are same as TEMP_ list above - TT_MAX6675, TT_THERMISTOR, TT_AD595, *
 *   TT_PT100, TT_INTERCOM, TT_NONE. See list in temp.c.                     *
+*                                                                           *
+* The "additional" field is used for TT_THERMISTOR only. It defines the     *
+* name of the table(s) in ThermistorTable.h to use. Typically, this is      *
+* THERMISTOR_EXTRUDER for the first or only table, or THERMISTOR_BED for    *
+* the second table. See also early in ThermistorTable.{single|double}.h.    *
 *                                                                           *
 \***************************************************************************/
 
@@ -275,9 +280,9 @@
 	#define DEFINE_TEMP_SENSOR(...)
 #endif
 
-//                 name       type          pin			additional
-DEFINE_TEMP_SENSOR(noheater,	TT_INTERCOM,	0,		0)
-DEFINE_TEMP_SENSOR(bed,			TT_INTERCOM,	1,		0)
+//                 name       type            pin        additional
+DEFINE_TEMP_SENSOR(noheater,  TT_INTERCOM,    0,         0)
+DEFINE_TEMP_SENSOR(bed,       TT_INTERCOM,    1,         0)
 
 // bed has no heater attached
 #define HEATER_bed HEATER_noheater
@@ -446,6 +451,13 @@ DEFINE_TEMP_SENSOR(bed,			TT_INTERCOM,	1,		0)
 	higher values make PID derivative term more stable at the expense of reaction time
 */
 #define	TH_COUNT					8
+
+/** \def FAST_PWM
+	Teacup offers two PWM frequencies, 76(61) Hz and 78000(62500) Hz on a 20(16) MHz electronics. The faster one is the default, as it's what most other firmwares do. It can make the heater MOSFETs pretty hot, though.
+
+	Comment this option out if your MOSFETs overheat. Drawback is, in a quiet environment you might notice the heaters and your power supply humming, then.
+*/
+#define	FAST_PWM
 
 /// this is the scaling of internally stored PID values. 1024L is a good value
 #define	PID_SCALE						1024L

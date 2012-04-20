@@ -11,6 +11,7 @@
 */
 
 #include	<avr/interrupt.h>
+#include	"memory_barrier.h"
 
 #include	"arduino.h"
 #include	"config.h"
@@ -19,7 +20,6 @@
 #include	"dda_queue.h"
 #endif
 
-#include	"memory_barrier.h"
 
 /// how often we overflow and update our clock; with F_CPU=16MHz, max is < 4.096ms (TICK_TIME = 65535)
 #define		TICK_TIME			2 MS
@@ -28,6 +28,11 @@
 
 /// time until next step, as output compare register is too small for long step times
 uint32_t	next_step_time;
+
+#ifdef ACCELERATION_TEMPORAL
+/// unwanted extra delays, ideally always zero
+uint32_t	step_extra_time = 0;
+#endif /* ACCELERATION_TEMPORAL */
 
 /// every time our clock fires, we increment this so we know when 10ms has elapsed
 uint8_t						clock_counter_10ms = 0;
@@ -43,6 +48,9 @@ volatile uint8_t	clock_flag_1s = 0;
 
 /// comparator B is the system clock, happens every TICK_TIME
 ISR(TIMER1_COMPB_vect) {
+	// save status register
+	uint8_t sreg_save = SREG;
+
 	// set output compare register to the next clock tick
 	OCR1B = (OCR1B + TICK_TIME) & 0xFFFF;
 
@@ -66,12 +74,19 @@ ISR(TIMER1_COMPB_vect) {
 			}
 		}
 	}
+
+	// restore status register
+	MEMORY_BARRIER();
+	SREG = sreg_save;
 }
 
 #ifdef	HOST
 
 /// comparator A is the step timer. It has higher priority then B.
 ISR(TIMER1_COMPA_vect) {
+	// save status register
+	uint8_t sreg_save = SREG;
+
 	// Check if this is a real step, or just a next_step_time "overflow"
 	if (next_step_time < 65536) {
 		// step!
@@ -103,6 +118,10 @@ ISR(TIMER1_COMPA_vect) {
 		next_step_time += 10000;
 	}
 	// leave OCR1A as it was
+
+	// restore status register
+	MEMORY_BARRIER();
+	SREG = sreg_save;
 }
 #endif /* ifdef HOST */
 
@@ -131,18 +150,19 @@ void timer_init()
 */
 void setTimer(uint32_t delay)
 {
-	// save interrupt flag
-	uint8_t sreg = SREG;
 	uint16_t step_start = 0;
+	#ifdef ACCELERATION_TEMPORAL
+	uint16_t current_time;
+	uint32_t earliest_time, actual_time;
+	#endif /* ACCELERATION_TEMPORAL */
 
 	// re-enable clock interrupt in case we're recovering from emergency stop
 	TIMSK1 |= MASK(OCIE1B);
 
-	// if the delay is too small use a minimum delay so that there is time
-	// to set everything up before the timer expires.
-
-	if (delay < 17 )
-		delay = 17;
+	// An interrupt would make all our timing calculations invalid,
+	// so stop that here.
+	cli();
+	CLI_SEI_BUG_MEMORY_BARRIER();
 
 	// Assume all steps belong to one move. Within one move the delay is
 	// from one step to the next one, which should be more or less the same
@@ -153,8 +173,36 @@ void setTimer(uint32_t delay)
 		// new move, take current time as start value
 		step_start = TCNT1;
 	}
-
 	next_step_time = delay;
+
+	#ifdef ACCELERATION_TEMPORAL
+	// 300 = safe number of cpu cycles until the interrupt actually happens
+	current_time = TCNT1;
+	earliest_time = (uint32_t)current_time + 300;
+	if (current_time < step_start) // timer counter did overflow recently
+		earliest_time += 0x00010000;
+	actual_time = (uint32_t)step_start + next_step_time;
+
+	// Setting the interrupt earlier than it can happen obviously doesn't
+	// make sense. To keep the "belongs to one move" idea, add an extra,
+	// remember this extra and compensate the extra if a longer delay comes in.
+	if (earliest_time > actual_time) {
+		step_extra_time += (earliest_time - actual_time);
+		next_step_time = earliest_time - (uint32_t)step_start;
+	}
+	else if (step_extra_time) {
+		if (step_extra_time < actual_time - earliest_time) {
+			next_step_time -= step_extra_time;
+			step_extra_time = 0;
+		}
+		else {
+			step_extra_time -= (actual_time - earliest_time);
+			next_step_time -= (actual_time - earliest_time);
+		}
+	}
+	#endif /* ACCELERATION_TEMPORAL */
+
+	// Now we know how long we actually want to delay, so set the timer.
 	if (next_step_time < 65536) {
 		// set the comparator directly to the next real step
 		OCR1A = (next_step_time + step_start) & 0xFFFF;
@@ -171,16 +219,10 @@ void setTimer(uint32_t delay)
 	}
 
 	// Enable this interrupt, but only do it after disabling
-	// global interrupts. This will cause push any possible
+	// global interrupts (see above). This will cause push any possible
 	// timer1a interrupt to the far side of the return, protecting the 
 	// stack from recursively clobbering memory.
-	cli();
-	CLI_SEI_BUG_MEMORY_BARRIER();
 	TIMSK1 |= MASK(OCIE1A);
-
-	// restore interrupt flag
-	MEMORY_BARRIER();
-	SREG = sreg;
 }
 
 /// stop timers - emergency stop
