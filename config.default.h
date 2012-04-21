@@ -146,7 +146,7 @@
 	how fast to accelerate when using ACCELERATION_RAMPING.
 		given in mm/s^2, decimal allowed, useful range 1. to 10'000. Start with 10. for milling (high precision) or 1000. for printing
 */
-#define ACCELERATION 1000.
+#define ACCELERATION 10.
 
 /** \def ACCELERATION_TEMPORAL
 	temporal step algorithm
