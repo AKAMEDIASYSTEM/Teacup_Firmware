@@ -64,10 +64,13 @@
 	half-stepping doubles the number, quarter stepping requires * 4, etc.
 
 	valid range = 20 to 4'0960'000 (0.02 to 40960 steps/mm)
+
+	<!-- stepspermm = (200 steps motor per turn) * (1 for no microstepping, 4 for quarterstepping, etc) / (1.25mm is pitch of the thread) -->
+	<!-- we are halfstepping (MS1 is high, MS2 is low) so this is (200*2)/1.25 = 320 -->
 */
-#define	STEPS_PER_M_X					80368
-#define	STEPS_PER_M_Y					80368
-#define	STEPS_PER_M_Z					3333592
+#define	STEPS_PER_M_X					320000
+#define	STEPS_PER_M_Y					320000
+#define	STEPS_PER_M_Z					320000
 
 /// http://blog.arcol.hu/?p=157 may help with this one
 #define	STEPS_PER_M_E					11036
@@ -81,15 +84,15 @@
 */
 
 /// used for G0 rapid moves and as a cap for all other feedrates
-#define	MAXIMUM_FEEDRATE_X		200
-#define	MAXIMUM_FEEDRATE_Y		200
-#define	MAXIMUM_FEEDRATE_Z		100
+#define	MAXIMUM_FEEDRATE_X		500
+#define	MAXIMUM_FEEDRATE_Y		500
+#define	MAXIMUM_FEEDRATE_Z		500
 #define	MAXIMUM_FEEDRATE_E		600
 
 /// used when searching endstops and as default feedrate
-#define	SEARCH_FEEDRATE_X			50
-#define	SEARCH_FEEDRATE_Y			50
-#define	SEARCH_FEEDRATE_Z			1
+#define	SEARCH_FEEDRATE_X			200
+#define	SEARCH_FEEDRATE_Y			200
+#define	SEARCH_FEEDRATE_Z			150
 // no SEARCH_FEEDRATE_E, as E can't be searched
 
 /** \def SLOW_HOMING
@@ -106,14 +109,14 @@
 	Define them to your machine's size relative to what your host considers to be the origin.
 */
 
-//#define	X_MIN			0.0
-//#define	X_MAX			200.0
+#define	X_MIN			-88.0
+#define	X_MAX			88.0
 
-//#define	Y_MIN			0.0
-//#define	Y_MAX			200.0
+#define	Y_MIN			-88.0
+#define	Y_MAX			88.0
 
-//#define	Z_MIN			0.0
-//#define	Z_MAX			140.0
+#define	Z_MIN			-24.0
+#define	Z_MAX			24.0
 
 /**	\def E_ABSOLUTE
 	Some G-Code creators produce relative length commands for the extruder, others absolute ones. G-Code using absolute lengths can be recognized when there are G92 E0 commands from time to time. If you have G92 E0 in your G-Code, define this flag.
@@ -148,7 +151,7 @@
 	how fast to accelerate when using ACCELERATION_RAMPING.
 		given in mm/s^2, decimal allowed, useful range 1. to 10'000. Start with 10. for milling (high precision) or 1000. for printing
 */
-#define ACCELERATION 10.
+#define ACCELERATION 100.
 
 /** \def ACCELERATION_TEMPORAL
 	temporal step algorithm
@@ -184,7 +187,7 @@
 	internal pullup resistors
 		the ATmega has internal pullup resistors on it's input pins which are counterproductive with the commonly used eletronic endstops, so they should be switched off. For other endstops, like mechanical ones, you may want to uncomment this.
 */
-//#define USE_INTERNAL_PULLUPS
+#define USE_INTERNAL_PULLUPS
 
 /*
 	This is for the RAMPS v1.3 shield
@@ -208,7 +211,7 @@
 #define	Y_MIN_PIN   					DIO52
 //#define	Y_MAX_PIN   					DIO15
 //#define	Y_ENABLE_PIN					AIO2
-#define	Y_INVERT_DIR
+//#define	Y_INVERT_DIR
 //#define	Y_INVERT_MIN
 //#define	Y_INVERT_MAX
 //#define	Y_INVERT_ENABLE
@@ -217,14 +220,14 @@
 #define	Z_DIR_PIN   					DIO23
 #define	Z_INVERT_DIR
 #define	Z_MIN_PIN   					DIO51
-//#define	Z_MAX_PIN   					DIO19
+#define	Z_MAX_PIN   					DIO50
 //#define	Z_ENABLE_PIN					AIO8
 //#define	Z_INVERT_MIN
 //#define	Z_INVERT_MAX
 //#define	Z_INVERT_ENABLE
 
-#define	E_STEP_PIN  					DIO26
-#define	E_DIR_PIN   					DIO28
+#define	E_STEP_PIN  					AIO0
+#define	E_DIR_PIN   					AIO1
 //#define	E_ENABLE_PIN					DIO24
 //#define	E_INVERT_DIR
 //#define	E_INVERT_ENABLE
@@ -259,11 +262,11 @@ temperature is "achieved" for purposes of M109 and friends when actual temperatu
 
 /// which temperature sensors are you using? List every type of sensor you use here once, to enable the appropriate code. Intercom is the gen3-style separate extruder board.
 // #define	TEMP_MAX6675
-#define	TEMP_THERMISTOR
+// #define	TEMP_THERMISTOR
 // #define	TEMP_AD595
 // #define	TEMP_PT100
 // #define	TEMP_INTERCOM
-// #define	TEMP_NONE
+ #define	TEMP_NONE
 
 /***************************************************************************\
 *                                                                           *
@@ -287,7 +290,7 @@ temperature is "achieved" for purposes of M109 and friends when actual temperatu
 #endif
 
 //                 name       type            pin        additional
-DEFINE_TEMP_SENSOR(motor,  TT_NONE,  AIO13_PIN, THERMISTOR_EXTRUDER)
+DEFINE_TEMP_SENSOR(motor,  TT_NONE,  AIO13_PIN,0)
 // DEFINE_TEMP_SENSOR(bed,       TT_THERMISTOR,  AIO14_PIN, THERMISTOR_EXTRUDER)
 
 
@@ -336,8 +339,9 @@ DEFINE_TEMP_SENSOR(motor,  TT_NONE,  AIO13_PIN, THERMISTOR_EXTRUDER)
 //DEFINE_HEATER( extruder,	PB4)
 //DEFINE_HEATER( bed,     	PH5)
 //DEFINE_HEATER( fan,     	PH6)
-// DEFINE_HEATER(chamber,	PORTD, PIND7, OCR2A)
- DEFINE_HEATER(motor,		PORTD, PIND6, OCR2B)
+//DEFINE_HEATER(chamber,	PORTD, PIND7, OCR2A)
+//DEFINE_HEATER(motor,		PORTD, PIND6, OCR2B)
+  DEFINE_HEATER(motor,		PL3)
 
 /// and now because the c preprocessor isn't as smart as it could be,
 /// uncomment the ones you've listed above and comment the rest.
@@ -345,9 +349,10 @@ DEFINE_TEMP_SENSOR(motor,  TT_NONE,  AIO13_PIN, THERMISTOR_EXTRUDER)
 /// so if you list a bed above, uncomment HEATER_BED, but if you list a chamber you do NOT need to create HEATED_CHAMBER
 /// I have searched high and low for a way to make the preprocessor do this for us, but so far I have not found a way.
 
-#define	HEATER_EXTRUDER HEATER_motor
+//define	HEATER_EXTRUDER HEATER_extruder
 //#define HEATER_BED HEATER_bed
 // #define HEATER_FAN HEATER_fan
+//  # define HEATER_MOTOR HEATER_motor
 
 
 
